@@ -1,0 +1,28 @@
+---
+title: "Data Wrangling Demo"
+author: "Art Tay"
+format:
+  pdf:
+     documentclass: article
+     papersize: letter
+     geometry:
+         margin=1in
+---
+
+```{r setup, include=FALSE}
+##Setup code
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+# Libraries
+library(tidyverse)
+library(magrittr)
+library(tidymodels)
+library(kableExtra)
+
+
+tidymodels_prefer()
+```
+
+```{r}
+data <- read.csv("./Cholesterol_R.csv")
+```
