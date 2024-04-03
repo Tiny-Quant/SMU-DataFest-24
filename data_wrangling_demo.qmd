@@ -23,6 +23,85 @@ library(kableExtra)
 tidymodels_prefer()
 ```
 
+# Loading Dependencies
+```{r}
+# Option 1: Individual Packages (not recommended).
+library(dplyr)
+
+# Option 2: tidyverse (okay).
+library(tidyverse)
+
+# Option 3: tidymodels (preferred). 
+library(tidymodels) 
+tidymodels_prefer() # Can be used to avoid conflicts with other packages.
+```
+
 ```{r}
 data <- read.csv("./Cholesterol_R.csv")
+head(data)
+str(data)
 ```
+
+```{r}
+# Quick Intro to pipes plus renaming. 
+
+# rename(new_name = old_name). 
+#data <- data %>% rename(ID = ï..ID)
+
+# Think %>% mean "and then". 
+```
+
+# Subseting  
+```{r}
+# Selecting columns manually. 
+measurements <- data %>% select(Before, After4weeks, After8weeks)
+head(measurements)
+
+# Selecting based on a pattern.  
+after <- data %>% select(starts_with("After"))
+head(after)
+```
+
+```{r}
+#| eval: false
+
+# Lots of options. 
+tidyselect::starts_with()
+tidyselect::ends_with()
+tidyselect::contains()
+tidyselect::matches()
+tidyselect::num_range()
+tidyselect::everything()
+tidyselect::one_of()
+tidyselect::all_of()
+tidyselect::any_of()
+```
+
+```{r}
+# Slicing rows.
+first3 <- data %>% slice(1:3)
+first3
+
+# Filter rows based on a condition. 
+A_above_6 <- data %>% filter(After8weeks >= 6 & Margarine == "A")
+head(A_above_6)
+```
+
+# Sorting 
+
+# Pivoting 
+
+# Joins 
+
+# Summarizing 
+
+# Feature Engineering
+
+# Extensions for Modeling 
+
+## Resampling 
+
+## Missing Data 
+ 
+
+
