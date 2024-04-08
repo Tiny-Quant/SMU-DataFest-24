@@ -69,17 +69,7 @@ d
 - Generate 10 samples from a normal distribution, add 1, then test if
 the mean is different from 2. 
 ```{r}
-# Fails because sum is not element wise. 
-# t_test_practice <- rnorm(n = 10) |> sum(1) |> t.test(mu=2)
 
-# Using an anonymous function.
-t_test_practice <- rnorm(n = 10) |> {\(x) x + 1}()
-
-# An easy way out. 
-t_test_practice <- (rnorm(n = 10) + 1) |> t.test(mu = 2)
-
-# Works, but it is best to avoid this notation. 
-t_test_practice <- rnorm(n = 10) %>% `+`(1) |> t.test(mu = 2)
 ```
 
 # Quick Look at the Data
@@ -136,8 +126,7 @@ head(A_above_6)
 ## Practice
 - Find the patient IDs with baseline (before) measurements below 5. 
 ```{r}
-ids_below_5 <- data |> filter(Before < 5) |> select(ID)
-ids_below_5
+
 ```
 
 # Sorting 
@@ -158,8 +147,7 @@ head(data_sort_many)
 ## Practice 
 - Sort Margarine in alphabetical order, then the IDs in ascending order.
 ```{r}
-data_sort_prac <- data |> arrange(Margarine, desc(ID))
-data_sort_prac
+
 ```
 
 # Summarizing 
@@ -180,13 +168,7 @@ summary_table
 ## Practice 
 - Find the median for each column for patients with even ID numbers. 
 ```{r}
-summary_practice <- data |> filter(ID %% 2 == 0) |> select(-ID) |>
-    summarise(
-        across(where(is.numeric), 
-            median
-        )
-    )
-summary_practice
+
 ``` 
 
 # Feature Engineering
@@ -220,9 +202,7 @@ head(normalized)
 ## Practice 
 - Find the percentage change between baseline and 8 weeks.     
 ```{r}
-percent_changes <- data |> mutate(percent_change = After8weeks / Before - 1) |> 
-                           select(percent_change)
-head(percent_changes)
+
 ```
 
 # Pivoting 
@@ -254,13 +234,7 @@ t.test(data_wide$Before, data_wide$After8weeks)
 - Create a bar plot with time groups on the x axis and the average 8 week 
 difference on the y axis.  
 ```{r}
-pivot_practice <- data |> 
-    pivot_longer(cols = c(Before, starts_with("After")), 
-                 names_to = "Time", values_to = "Measurements") |> 
-    group_by(Time) |> summarise(Average = mean(Measurements)) |> 
-    ggplot(aes(x = Time, y = Average)) + geom_bar(stat = "identity")
 
-pivot_practice
 ```
 
 # Joins 
@@ -320,12 +294,7 @@ data_to_include <- data.frame(
 ```
 
 ```{r}
-data_combined_practice <- data |> 
-    left_join(data_to_include, join_by(ID)) |> 
-    group_by(Margarine) |> 
-    mutate(Weight = ifelse(is.na(Weight), mean(Weight, na.rm = T), Weight))
 
-head(data_combined_practice)
 ```
 
 \pagebreak
