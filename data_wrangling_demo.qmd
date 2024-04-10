@@ -336,18 +336,48 @@ p_values
 - Works well with the resampling and modeling framework. 
 
 ```{r}
-recipe_ex <- data_train |> recipe( diff_8wk ~ .) |> 
-             # Don't use ID for modeling, but keep it in the dataset. 
-             update_role(ID, new_role = "ID") |> 
-             step_select(c(diff_8wk, Margarine, Before)) |> 
-             step_mutate(Margarine = as.factor(Margarine)) |> 
-             # Imputation - handles missing data. 
-             step_impute_knn(diff_8wk, neighbors = 1) |> 
-             # Normalize - there is actually a step_normalize.
-             step_mutate_at(all_numeric_predictors(), fn = norm_func) |> 
-             # Create dummy variable.  
-             step_dummy(all_nominal_predictors()) |>  
-             prep()
+# Recipe work based on variable roles. This makes it easier to preform 
+# grouped transformations. 
+recipe_ex <- data_train |> 
+                recipe( diff_8wk ~ .) |> 
+                    # Don't use ID for modeling, but keep it in the dataset. 
+                    update_role(ID, new_role = "ID") 
+
+recipe_ex
+```
+
+```{r}
+# Most dyplr function have an analog in recipes. 
+recipe_ex <- recipe_ex |> 
+                step_select(c(diff_8wk, Margarine, Before)) |> 
+                step_mutate(Margarine = as.factor(Margarine)) 
+
+recipe_ex
+```
+
+```{r}
+# Let's take a look at what our cleaned dataset would look like here. 
+data_train_cleaned <- bake(prep(recipe_ex), new_data = NULL)
+head(data_train_cleaned)
+```
+
+```{r}
+# Why do we need prep? For learned transformations. 
+recipe_ex <- recipe_ex |> 
+                # Imputation - handles missing data. 
+                step_impute_knn(diff_8wk, neighbors = 1)
+
+recipe_ex |> prep()
+```
+
+```{r}
+# Grouped transformations. 
+recipe_ex <- recipe_ex |> 
+                # Normalize - there is actually a step_normalize.
+                step_mutate_at(all_numeric_predictors(), fn = norm_func) |> 
+                # Create dummy variable.  
+                step_dummy(all_nominal_predictors()) |>  
+                prep()
 recipe_ex
 ```
 
