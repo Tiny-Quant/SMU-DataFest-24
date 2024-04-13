@@ -1,0 +1,423 @@
+---
+title: "Data Wrangling R"
+author: "Art Tay"
+format:
+  pdf:
+     documentclass: article
+     papersize: letter
+     geometry:
+         margin=1in
+---
+
+```{r setup, include=FALSE}
+##Setup code
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+# Loading Packages 
+```{r}
+# Option 1: Individual Packages (not recommended).
+library(dplyr)
+
+# Option 2: tidyverse (okay).
+library(tidyverse)
+
+# Option 3: tidymodels (preferred). 
+library(tidymodels) 
+tidymodels_prefer() # Can be used to avoid conflicts with other packages.
+```
+
+- [Tidyverse Documentation](https://www.tidymodels.org/)
+
+- [Tidymodels Documentation](https://www.tidyverse.org/) 
+
+- [Data Science in R (Free Textbook)](https://r4ds.hadley.nz/)
+
+# Pipes 
+
+- Pipes are a cleaner way to preform data operations. 
+
+- New in `R >=4.1` "**`|>`**" is a native pipe operator. 
+
+- `%>%` comes from tidyverse and can also be used.
+
+- **Syntax:** object pipe function(args) <-> function(object, args)
+
+- **Chaining:** Data |> function1(args) |> function2(args) = 
+            function2(function1(data, args1), args2)
+
+## Examples: 
+```{r}
+# Simple example. 
+a <- 5
+b <- a |> sum(2)
+b
+
+c <- sum(a, 2)
+c
+
+# Pipes work with all named functions.
+t_test <- rnorm(n = 10, mean = 1, sd = 1) |> t.test()
+t_test
+
+# You can use anonymous functions.
+d <- 5 |> {\(x) x * 7}()
+d
+```
+
+## Practice: 
+- Generate 10 samples from a normal distribution, add 1, then test if
+the mean is different from 2. 
+```{r}
+# Fails because sum is not element wise. 
+# t_test_practice <- rnorm(n = 10) |> sum(1) |> t.test(mu=2)
+
+# Using an anonymous function.
+t_test_practice <- rnorm(n = 10) |> {\(x) x + 1}()
+
+# An easy way out. 
+t_test_practice <- (rnorm(n = 10) + 1) |> t.test(mu = 2)
+
+# Works, but it is best to avoid this notation. 
+t_test_practice <- rnorm(n = 10) %>% `+`(1) |> t.test(mu = 2)
+```
+
+# Quick Look at the Data
+```{r}
+data <- read.csv("./Cholesterol_R.csv")
+data <- data |> rename("ID" = contains("ID"))
+
+head(data)
+str(data)
+```
+
+# Subseting  
+
+## Examples: 
+```{r}
+# Selecting columns by name. 
+measurements <- data |> select(Before, After4weeks, After8weeks)
+head(measurements)
+```
+
+```{r}
+# Selecting columns based on a pattern. 
+after <- data |> select(starts_with("After"))
+head(after)
+```
+
+```{r}
+#| eval: false
+
+# Lots of options. 
+tidyselect::starts_with()
+tidyselect::ends_with()
+tidyselect::contains()
+tidyselect::matches()
+tidyselect::num_range()
+tidyselect::everything()
+tidyselect::one_of()
+tidyselect::all_of()
+tidyselect::any_of()
+```
+
+```{r}
+# Slicing rows.
+first3 <- data |> slice(1:3)
+first3
+```
+
+```{r}
+# Filter rows based on a condition. 
+A_above_6 <- data |> filter(After8weeks >= 6 & Margarine == "A")
+head(A_above_6)
+```
+
+## Practice
+- Find the patient IDs with baseline (before) measurements below 5. 
+```{r}
+ids_below_5 <- data |> filter(Before < 5) |> select(ID)
+ids_below_5
+```
+
+# Sorting 
+
+## Examples 
+```{r}
+# Sort the data based on a single column.  
+data_sort_baseline <- data |> arrange(desc(Before))
+head(data_sort_baseline)
+```
+
+```{r}
+# Sort thr data based on multiple columns. 
+data_sort_many <- data |> arrange(Before, Margarine)
+head(data_sort_many)
+```
+
+## Practice 
+- Sort Margarine in alphabetical order, then the IDs in ascending order.
+```{r}
+data_sort_prac <- data |> arrange(Margarine, desc(ID))
+data_sort_prac
+```
+
+# Summarizing 
+
+## Example 
+```{r}
+# Creating a table of summary statistics. 
+summary_table <- data |> select(-ID) |> group_by(Margarine) |>  
+    summarize(
+        across(where(is.numeric), 
+               list(mean = mean, sd = sd)
+        )
+    )
+
+summary_table
+```
+
+## Practice 
+- Find the median for each column for patients with even ID numbers. 
+```{r}
+summary_practice <- data |> filter(ID %% 2 == 0) |> select(-ID) |>
+    summarise(
+        across(where(is.numeric), 
+            median
+        )
+    )
+summary_practice
+``` 
+
+# Feature Engineering
+
+## Examples 
+```{r}
+# Create simple features. 
+data <- data |> mutate(
+    diff_4wk = After4weeks - Before, 
+    diff_8wk = After8weeks - Before 
+)
+
+head(data)
+```
+
+```{r}
+# Function based example: normalization.
+norm_func <- function(x){
+    x <- x - mean(x)
+    return(x / sd(x))
+}
+
+normalized <- data |> select(Before) |> 
+    mutate(
+        across(where(is.numeric), list(norm = norm_func, log = log))
+    )
+
+head(normalized)
+```
+
+## Practice 
+- Find the percentage change between baseline and 8 weeks.     
+```{r}
+percent_changes <- data |> mutate(percent_change = After8weeks / Before - 1) |> 
+                           select(percent_change)
+head(percent_changes)
+```
+
+# Pivoting 
+
+## Examples 
+```{r}
+# Pivot to long format. (Good for plotting).
+data_long <- data |> 
+    pivot_longer(cols = c(Before, starts_with("After")), 
+                 names_to = "Time", values_to = "Measurements")  
+head(data_long)
+
+# Why? 
+data_long |> ggplot(aes(x = ID, y = Measurements, color = Time)) +
+                geom_point() + geom_line() 
+```
+
+```{r}
+# Pivot to wide format. 
+data_wide <- data_long |> pivot_wider(names_from = Time, 
+                                      values_from = Measurements)
+head(data_wide)
+
+# Why? 
+t.test(data_wide$Before, data_wide$After8weeks)
+```
+
+## Practice 
+- Create a bar plot with time groups on the x axis and the average 8 week 
+difference on the y axis.  
+```{r}
+pivot_practice <- data |> 
+    pivot_longer(cols = c(Before, starts_with("After")), 
+                 names_to = "Time", values_to = "Measurements") |> 
+    group_by(Time) |> summarise(Average = mean(Measurements)) |> 
+    ggplot(aes(x = Time, y = Average)) + geom_bar(stat = "identity")
+
+pivot_practice
+```
+
+# Joins 
+
+## Examples 
+```{r}
+# Include additional information. 
+info_A <- data |> select(ID, Margarine) |> filter(Margarine == "A") |> 
+    mutate(After12weeks = rnorm(length(ID), mean = 3, sd = 1))
+head(info_A)
+```
+
+```{r}
+# Left join - maintains all the information on the left table. 
+data_left <- data |> left_join(info_A, join_by(ID, Margarine))
+head(data_left)
+```
+
+```{r}
+# Right join - maintains all the information on the right table. 
+data_right <- data |> right_join(info_A, join_by(ID, Margarine))
+head(data_right)
+```
+
+```{r}
+# Inner v. Full Joins  
+full_ex_1 <- data.frame(ID = 1:10, value_1 = rnorm(10))
+full_ex_2 <- data.frame(ID = 6:15, value_2 = rnorm(10))
+
+full_ex_1 |> left_join(full_ex_2, join_by(ID))
+full_ex_1 |> inner_join(full_ex_2, join_by(ID))
+full_ex_1 |> full_join(full_ex_2, join_by(ID)) 
+```
+
+```{r}
+# Additional patients to include. 
+data_2 <- data |> select(-c(ID, starts_with("diff"))) |> 
+                  mutate(Margarine = ifelse(Margarine == "A", "C", "D")) |> 
+                  mutate(across(where(is.numeric), 
+                                function(x){x + rnorm(length(x))}
+                        )
+                  ) |> 
+                  mutate(ID = 19:36)
+
+data_combined <- data |> bind_rows(data_2)
+head(data_combined)
+```
+
+## Practice 
+- Include the following information retaining all patients present in the original dataset measurement. Complete the dataset by replacing any missing (NA) values 
+with the mean for the patients corresponding group (Margarine). 
+```{r}
+data_to_include <- data.frame(
+    ID = 6:20, 
+    Weight = rnorm(n = 15, 100, 10)
+)
+```
+
+```{r}
+data_combined_practice <- data |> 
+    left_join(data_to_include, join_by(ID)) |> 
+    group_by(Margarine) |> 
+    mutate(Weight = ifelse(is.na(Weight), mean(Weight, na.rm = T), Weight))
+
+head(data_combined_practice)
+```
+
+\pagebreak
+
+# Extensions for Modeling 
+
+## Resampling 
+```{r}
+# Create a 80-20 train/test split. 
+set.seed(123)
+split <- initial_split(data_combined, prop = 0.8) # contains indices.
+
+data_train <- training(split)
+data_test <- testing(split)
+```
+
+```{r}
+# Bootstrap t-tests.  
+boots <- data_train |> select(ID, Before) |> bootstraps(times = 10)
+head(as.data.frame(boots$splits[[1]]))
+
+p_values <- sapply(boots$splits, 
+    FUN = function(x) {
+        p_value <- x |> as.data.frame() |> t.test()
+        p_value$p.value 
+    } 
+)
+p_values
+```
+
+## Recipes 
+
+- Recipes are a way to bundle data pre-processing (possible trained).
+
+- Easier access to more complex transformations (ex: PCA, Splines, Imputation). 
+
+- Avoids data leakage, and is online for incoming data.  
+
+- Works well with the resampling and modeling framework. 
+
+```{r}
+# Recipe work based on variable roles. This makes it easier to preform 
+# grouped transformations. 
+recipe_ex <- data_train |> 
+                recipe( diff_8wk ~ .) |> 
+                    # Don't use ID for modeling, but keep it in the dataset. 
+                    update_role(ID, new_role = "ID") 
+
+recipe_ex
+```
+
+```{r}
+# Most dyplr function have an analog in recipes. 
+recipe_ex <- recipe_ex |> 
+                step_select(c(diff_8wk, Margarine, Before)) |> 
+                step_mutate(Margarine = as.factor(Margarine)) 
+
+recipe_ex
+```
+
+```{r}
+# Let's take a look at what our cleaned dataset would look like here. 
+data_train_cleaned <- bake(prep(recipe_ex), new_data = NULL)
+head(data_train_cleaned)
+```
+
+```{r}
+# Why do we need prep? For learned transformations. 
+recipe_ex <- recipe_ex |> 
+                # Imputation - handles missing data. 
+                step_impute_knn(diff_8wk, neighbors = 1)
+
+recipe_ex |> prep()
+```
+
+```{r}
+# Grouped transformations. 
+recipe_ex <- recipe_ex |> 
+                # Normalize - there is actually a step_normalize.
+                step_mutate_at(all_numeric_predictors(), fn = norm_func) |> 
+                # Create dummy variable.  
+                step_dummy(all_nominal_predictors()) |>  
+                prep()
+recipe_ex
+```
+
+```{r}
+data_train_cleaned <- bake(recipe_ex, new_data = NULL)
+data_train_cleaned
+```
+
+```{r}
+data_test_cleaned <- bake(recipe_ex, new_data = data_test)
+data_test_cleaned
+```
